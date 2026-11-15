@@ -215,6 +215,7 @@ function setupHeroScroll() {
     video.setAttribute('playsinline', '');
   }
   let primed = false, priming = false;
+  let lastRequested = null;
   let frame = null;
   let target = 0;
   let disposed = false;
@@ -226,10 +227,21 @@ function setupHeroScroll() {
     if (distance <= 0) return;
     const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
     target = progress * Math.max(0, video.duration - 1 / 24);
-    if (!video.seeking && Math.abs(video.currentTime - target) > 1 / 48) video.currentTime = target;
+    if (!video.seeking && Math.abs(video.currentTime - target) > 1 / 48) {
+      if (videoExperiment && typeof video.fastSeek === 'function') {
+        // Todos los cuadros son keyframes; priorizar respuesta al movimiento.
+        lastRequested = target;
+        try { video.fastSeek(target); } catch { video.currentTime = target; }
+      } else video.currentTime = target;
+    }
   }
   const loaded = () => { video.removeAttribute('poster'); video.classList.add('is-ready'); schedule(); };
-  const seeked = () => { if (Math.abs(video.currentTime - target) > 1 / 48) schedule(); };
+  const seeked = () => {
+    if (videoExperiment && lastRequested !== null) {
+      // Evitar búsquedas repetidas cuando fastSeek aproxima el cuadro.
+      if (Math.abs(lastRequested - target) > 1 / 48) schedule();
+    } else if (Math.abs(video.currentTime - target) > 1 / 48) schedule();
+  };
   const failed = () => { video.classList.remove('is-ready'); };
   // Safari puede demorar la carga hasta que el video comience a reproducirse.
   function primeVideo() {
@@ -246,6 +258,7 @@ function setupHeroScroll() {
     // Recuperar los cuadros sin recargar la página y sincronizar al cargar.
     video.classList.remove('is-ready');
     primed = false;
+    lastRequested = null;
     video.load();
     primeVideo();
   }
