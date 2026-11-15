@@ -130,7 +130,14 @@ function setupTouchHero(section, video) {
   hero.prepend(canvas);
   const context = canvas.getContext('2d', { alpha:false });
   const sprites = new Map();
-  let desired = 0, direction = 1, raf = null, stopped = false;
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  const frameWidth = portrait ? 360 : 720;
+  const frameHeight = portrait ? 640 : 405;
+  const columns = portrait ? 4 : 5;
+  const perSprite = columns * columns;
+  const spriteCount = Math.ceil(100 / perSprite);
+  const spriteFolder = portrait ? 'cine-vertical' : 'cine-sprites-hd';
+  let desired = 0, direction = 1, rendered = -1, raf = null, stopped = false;
   const schedule = () => { if (!stopped && raf === null) raf = requestAnimationFrame(update); };
   function update() {
     raf = null;
@@ -140,30 +147,35 @@ function setupTouchHero(section, video) {
     const nextFrame = Math.min(99, Math.round(progress * 99));
     if (nextFrame !== desired) direction = nextFrame > desired ? 1 : -1;
     desired = nextFrame;
-    const current = Math.floor(desired / 25);
-    const neighbor = Math.max(0, Math.min(3, current + direction));
+    const current = Math.floor(desired / perSprite);
+    const neighbor = Math.max(0, Math.min(spriteCount - 1, current + direction));
     const needed = new Set([current, neighbor]);
-    sprites.forEach((image, index) => {
-      if (!needed.has(index)) { image.onload = null; image.removeAttribute('src'); sprites.delete(index); }
+    sprites.forEach((entry, index) => {
+      if (!needed.has(index)) { entry.image.removeAttribute('src'); sprites.delete(index); }
     });
     needed.forEach(index => {
       if (sprites.has(index)) return;
       const image = new Image();
-      image.onload = schedule;
-      image.src = `/assets/cine-sprites-hd/${index}.jpg`;
-      sprites.set(index, image);
+      const entry = { image, ready:false };
+      sprites.set(index, entry);
+      image.src = `/assets/${spriteFolder}/${index}.jpg`;
+      image.decode().then(() => {
+        if (!stopped && sprites.get(index) === entry) { entry.ready = true; schedule(); }
+      }).catch(() => {});
     });
-    const sprite = sprites.get(current);
-    if (!sprite.complete || !sprite.naturalWidth || !context) return;
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const entry = sprites.get(current);
+    if (!entry?.ready || !context) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
     const width = Math.max(1, Math.round(hero.clientWidth * ratio));
     const height = Math.max(1, Math.round(hero.clientHeight * ratio));
-    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-    const frame = desired % 25;
-    const scale = Math.max(width / 720, height / 405);
-    const drawnWidth = 720 * scale, drawnHeight = 405 * scale;
-    context.drawImage(sprite, (frame % 5) * 720, Math.floor(frame / 5) * 405, 720, 405,
+    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; rendered = -1; }
+    if (desired === rendered) return;
+    const frame = desired % perSprite;
+    const scale = Math.max(width / frameWidth, height / frameHeight);
+    const drawnWidth = frameWidth * scale, drawnHeight = frameHeight * scale;
+    context.drawImage(entry.image, (frame % columns) * frameWidth, Math.floor(frame / columns) * frameHeight, frameWidth, frameHeight,
       (width - drawnWidth) / 2, (height - drawnHeight) / 2, drawnWidth, drawnHeight);
+    rendered = desired;
     canvas.classList.add('is-ready');
   }
   window.addEventListener('scroll', schedule, { passive:true });
@@ -180,7 +192,7 @@ function setupTouchHero(section, video) {
     window.visualViewport?.removeEventListener('resize', schedule);
     window.removeEventListener('pageshow', schedule);
     document.removeEventListener('visibilitychange', schedule);
-    sprites.forEach(image => { image.onload = null; image.removeAttribute('src'); });
+    sprites.forEach(entry => entry.image.removeAttribute('src'));
     sprites.clear();
   };
 }
