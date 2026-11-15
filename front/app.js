@@ -681,7 +681,7 @@ async function route() {
   cleanupHeroScroll = () => {};
   // Recuperar el encabezado antes de reemplazar el contenido de la ruta.
   document.body.insertBefore(header, main);
-  closeMenu(); const raw = location.hash.slice(1) || '/'; const [path, query = ''] = raw.split('?'); innerPage = path !== '/'; header.classList.toggle('is-light', innerPage); setEdgeColor(innerPage); updateHeader();
+  closeMenu(); const raw = location.hash.slice(1) || '/'; const [path, query = ''] = raw.split('?'); innerPage = path !== '/'; document.documentElement.classList.toggle('is-inner-page', innerPage); header.classList.toggle('is-light', innerPage); setEdgeColor(innerPage); updateHeader();
   main.innerHTML = '<div class="page"><p class="eyebrow">CARGANDO / UN MOMENTO</p></div>';
   try {
     if (!state.categories.length) state.categories = await api('/categorias');

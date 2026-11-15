@@ -144,3 +144,11 @@ main,.page,.records,.record,.record>div,.record-meta,.filter-bar>*{min-width:0}
 @media (pointer:coarse){
   .footer{padding-bottom:calc(22px + 100lvh - 100svh + env(safe-area-inset-bottom, 0px))}
 }
+
+/* En teléfonos, las páginas interiores cierran sobre el mismo fondo claro. */
+html.is-phone.is-inner-page .footer{
+  background:var(--paper);
+  color:var(--muted);
+  border-top:1px solid var(--line);
+  padding:24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+}
