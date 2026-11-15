@@ -120,6 +120,66 @@ function landing() {
   document.querySelector('.hero').prepend(header);
   setupHeroScroll();
 }
+// En pantallas táctiles la secuencia evita depender de la carga y el seek del video.
+function setupTouchHero(section, video) {
+  video.remove();
+  const picture = document.createElement('img');
+  picture.className = 'hero-video hero-frames';
+  picture.alt = '';
+  picture.setAttribute('aria-hidden', 'true');
+  section.querySelector('.hero').prepend(picture);
+  const total = 100;
+  const images = new Array(total);
+  let desired = 0, nextToPreload = 0, raf = null, stopped = false;
+  const path = index => `/assets/cine-frames/${String(index).padStart(3, '0')}.jpg`;
+  const load = (index, complete = () => {}) => {
+    if (stopped) return;
+    if (images[index]) {
+      if (images[index].complete && images[index].naturalWidth) complete();
+      else images[index].addEventListener('load', complete, { once:true });
+      return;
+    }
+    const image = new Image();
+    images[index] = image;
+    image.onload = () => {
+      if (!stopped && index === desired) { picture.src = image.src; picture.classList.add('is-ready'); }
+      complete();
+    };
+    image.onerror = complete;
+    image.src = path(index);
+  };
+  const preloadNext = () => {
+    if (stopped || nextToPreload >= total) return;
+    load(nextToPreload++, preloadNext);
+  };
+  const update = () => {
+    raf = null;
+    const distance = section.offsetHeight - section.querySelector('.hero').offsetHeight;
+    if (distance <= 0) return;
+    const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
+    desired = Math.min(total - 1, Math.round(progress * (total - 1)));
+    load(desired, () => {
+      const image = images[desired];
+      if (!stopped && image?.complete && image.naturalWidth) { picture.src = image.src; picture.classList.add('is-ready'); }
+    });
+  };
+  const schedule = () => { if (!stopped && raf === null) raf = requestAnimationFrame(update); };
+  window.addEventListener('scroll', schedule, { passive:true });
+  window.addEventListener('resize', schedule, { passive:true });
+  window.addEventListener('pageshow', schedule);
+  document.addEventListener('visibilitychange', schedule);
+  schedule();
+  for (let i = 0; i < 3; i++) preloadNext();
+  cleanupHeroScroll = () => {
+    stopped = true;
+    if (raf !== null) cancelAnimationFrame(raf);
+    window.removeEventListener('scroll', schedule);
+    window.removeEventListener('resize', schedule);
+    window.removeEventListener('pageshow', schedule);
+    document.removeEventListener('visibilitychange', schedule);
+    images.forEach(image => { if (image) { image.onload = null; image.onerror = null; } });
+  };
+}
 function setupHeroScroll() {
   const section = document.querySelector('.hero-scroll');
   const video = section.querySelector('.hero-video');
@@ -127,6 +187,7 @@ function setupHeroScroll() {
     video.remove();
     return;
   }
+  if (window.matchMedia('(pointer: coarse)').matches) { setupTouchHero(section, video); return; }
   let frame = null;
   let target = 0;
   let disposed = false;
