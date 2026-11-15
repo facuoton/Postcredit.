@@ -133,39 +133,41 @@ function setupTouchHero(section, video) {
   const portrait = window.matchMedia('(orientation: portrait)').matches;
   const frameWidth = portrait ? 360 : 720;
   const frameHeight = portrait ? 640 : 405;
-  const columns = portrait ? 4 : 5;
+  const columns = 5;
   const perSprite = columns * columns;
   const spriteCount = Math.ceil(100 / perSprite);
-  const spriteFolder = portrait ? 'cine-vertical' : 'cine-sprites-hd';
-  let desired = 0, direction = 1, rendered = -1, raf = null, stopped = false;
+  const spriteFolder = portrait ? 'cine-vertical-v2' : 'cine-sprites-hd';
+  let desired = 0, rendered = -1, raf = null, stopped = false;
   const schedule = () => { if (!stopped && raf === null) raf = requestAnimationFrame(update); };
+  function loadSprite(index) {
+    if (sprites.has(index)) return sprites.get(index);
+    const image = new Image();
+    const entry = { image, ready:false, promise:null };
+    sprites.set(index, entry);
+    image.src = `/assets/${spriteFolder}/${index}.jpg`;
+    entry.promise = image.decode().then(() => {
+      if (!stopped) { entry.ready = true; schedule(); }
+    }).catch(() => {});
+    return entry;
+  }
+  async function preloadSprites() {
+    // Descifrar de a una evita competir por recursos al abrir la página.
+    for (let index = 0; index < spriteCount && !stopped; index++) {
+      await loadSprite(index).promise;
+    }
+  }
   function update() {
     raf = null;
     const distance = section.offsetHeight - hero.offsetHeight;
     if (distance <= 0) return;
     const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
-    const nextFrame = Math.min(99, Math.round(progress * 99));
-    if (nextFrame !== desired) direction = nextFrame > desired ? 1 : -1;
-    desired = nextFrame;
+    desired = Math.min(99, Math.round(progress * 99));
     const current = Math.floor(desired / perSprite);
-    const neighbor = Math.max(0, Math.min(spriteCount - 1, current + direction));
-    const needed = new Set([current, neighbor]);
-    sprites.forEach((entry, index) => {
-      if (!needed.has(index)) { entry.image.removeAttribute('src'); sprites.delete(index); }
-    });
-    needed.forEach(index => {
-      if (sprites.has(index)) return;
-      const image = new Image();
-      const entry = { image, ready:false };
-      sprites.set(index, entry);
-      image.src = `/assets/${spriteFolder}/${index}.jpg`;
-      image.decode().then(() => {
-        if (!stopped && sprites.get(index) === entry) { entry.ready = true; schedule(); }
-      }).catch(() => {});
-    });
-    const entry = sprites.get(current);
-    if (!entry?.ready || !context) return;
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const entry = loadSprite(current);
+    if (!entry.ready || !context) return;
+    // El cuadro fuente ya tiene una resolución acotada; escalar el canvas a
+    // muchos píxeles de dispositivo no agrega detalle y hace más caro dibujar.
+    const ratio = 1;
     const width = Math.max(1, Math.round(hero.clientWidth * ratio));
     const height = Math.max(1, Math.round(hero.clientHeight * ratio));
     if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; rendered = -1; }
@@ -178,6 +180,7 @@ function setupTouchHero(section, video) {
     rendered = desired;
     canvas.classList.add('is-ready');
   }
+  preloadSprites();
   window.addEventListener('scroll', schedule, { passive:true });
   window.addEventListener('resize', schedule, { passive:true });
   window.visualViewport?.addEventListener('resize', schedule, { passive:true });
