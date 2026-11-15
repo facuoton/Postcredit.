@@ -472,7 +472,7 @@ function enhanceSelects(root) {
     wrapper.append(button, list);
     const update = () => {
       const selected = select.selectedOptions[0];
-      button.innerHTML = `<span>${label(selected?.textContent || '')}</span><span class="custom-select-arrow" aria-hidden="true">↗</span>`;
+      button.innerHTML = `<span>${label(selected?.textContent || '')}</span><span class="custom-select-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 12 4M6 4h6v6"/></svg></span>`;
       button.classList.toggle('is-placeholder', required && !select.value);
       list.querySelectorAll('[role="option"]').forEach(item => item.setAttribute('aria-selected', String(item.dataset.value === select.value)));
     };
