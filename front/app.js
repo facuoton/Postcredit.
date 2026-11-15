@@ -16,34 +16,35 @@ function setEdgeColor(light) {
     document.documentElement.style.setProperty('--overscroll-color', color);
   }
 }
-function updateEdgeColor(direction = 0) {
-  if (touchEdgeLocked || wheelEdgeLocked) return;
-  if (!innerPage) { setEdgeColor(false); return; }
-  const top = window.scrollY <= 1;
-  const bottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-  if (top && bottom && direction) setEdgeColor(direction < 0);
-  else if (top) setEdgeColor(true);
-  else if (bottom) setEdgeColor(false);
+function scrollRange() {
+  return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 }
-window.addEventListener('scroll', () => updateEdgeColor(), { passive:true });
-window.addEventListener('wheel', (event) => {
-  if (!wheelEdgeLocked && event.deltaY) {
-    updateEdgeColor(Math.sign(event.deltaY));
-    const atEdge = window.scrollY <= 1 || window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-    if (atEdge) wheelEdgeLocked = true;
-  }
+function updateEdgeColor() {
+  if (!innerPage) { setEdgeColor(false); return; }
+  const range = scrollRange();
+  // En páginas con recorrido, cambiar lejos del rebote, no durante él.
+  if (range > 2) setEdgeColor(Math.max(0, Math.min(range, window.scrollY)) < range / 2);
+}
+window.addEventListener('scroll', updateEdgeColor, { passive:true });
+window.addEventListener('resize', updateEdgeColor, { passive:true });
+window.addEventListener('wheel', event => {
+  // Si toda la página entra en pantalla, ambos bordes comparten la posición 0.
+  if (!innerPage || scrollRange() > 2 || !event.deltaY || wheelEdgeLocked) return;
+  setEdgeColor(event.deltaY < 0);
+  wheelEdgeLocked = true;
   clearTimeout(wheelUnlockTimer);
-  wheelUnlockTimer = setTimeout(() => { wheelEdgeLocked = false; updateEdgeColor(); }, 200);
+  wheelUnlockTimer = setTimeout(() => { wheelEdgeLocked = false; }, 200);
 }, { passive:true });
-window.addEventListener('touchstart', (event) => { touchStartY = event.touches.length === 1 ? event.touches[0].clientY : null; touchEdgeLocked = false; }, { passive:true });
-window.addEventListener('touchmove', (event) => {
-  if (touchStartY === null || touchEdgeLocked || event.touches.length !== 1) return;
+window.addEventListener('touchstart', event => {
+  touchStartY = event.touches.length === 1 ? event.touches[0].clientY : null;
+  touchEdgeLocked = false;
+}, { passive:true });
+window.addEventListener('touchmove', event => {
+  if (!innerPage || scrollRange() > 2 || touchStartY === null || touchEdgeLocked || event.touches.length !== 1) return;
   const movement = event.touches[0].clientY - touchStartY;
   if (Math.abs(movement) < 4) return;
-  const atTop = window.scrollY <= 1;
-  const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-  if (atTop && movement > 0) { setEdgeColor(innerPage); touchEdgeLocked = true; }
-  else if (atBottom && movement < 0) { setEdgeColor(false); touchEdgeLocked = true; }
+  setEdgeColor(movement > 0);
+  touchEdgeLocked = true;
 }, { passive:true });
 window.addEventListener('touchend', () => { touchStartY = null; touchEdgeLocked = false; }, { passive:true });
 window.addEventListener('touchcancel', () => { touchStartY = null; touchEdgeLocked = false; }, { passive:true });
@@ -710,7 +711,7 @@ async function route() {
     else if (path === '/circulo') await circle();
     else if (path.startsWith('/circulo/')) await friendArchive(path.slice('/circulo/'.length));
     else main.innerHTML = `<div class="page">${empty('Esta página no existe.', 'Volvamos al principio.', '#/', 'VOLVER AL INICIO')}</div>`;
-    observeReveals(); window.scrollTo(0, 0);
+    observeReveals(); window.scrollTo({ top:0, behavior:'instant' }); updateEdgeColor();
   } catch (error) { main.innerHTML = `<div class="page">${empty('No pudimos cargar esta página.', label(error.message), '#/', 'VOLVER AL INICIO')}</div>`; }
 }
 window.addEventListener('hashchange', route);
