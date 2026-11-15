@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: postcredit
+    runtime: node
+    plan: free
+    buildCommand: npm --prefix back ci
+    startCommand: npm --prefix back start
+    healthCheckPath: /salud
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

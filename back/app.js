@@ -1,0 +1,21 @@
+import express from 'express';
+import cors from 'cors';
+import usuarios from './routes/usuarios.routes.js';
+import resenas from './routes/resenas.routes.js';
+import invitaciones from './routes/invitaciones.routes.js';
+import { pedirToken } from './middlewares/autorizacion.js';
+import { responderError } from './utils/errores.js';
+import { fileURLToPath } from 'node:url';
+import { CATEGORIAS } from './categorias.mjs';
+
+export const app = express();
+app.use(cors());
+app.use(express.json({ limit: '8mb' }));
+app.get('/salud', (req, res) => res.json({ estado: 'ok' }));
+app.get('/categorias', (req, res) => res.json(CATEGORIAS));
+app.use('/usuarios', usuarios);
+app.use('/resenas', pedirToken, resenas);
+app.use('/invitaciones', pedirToken, invitaciones);
+app.use(express.static(fileURLToPath(new URL('../front/', import.meta.url))));
+app.use((req, res) => res.status(404).json({ mensaje: 'Ruta no encontrada.' }));
+app.use(responderError);

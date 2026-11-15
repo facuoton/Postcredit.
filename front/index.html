@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121312">
+  <script>
+    // Definir el color antes de pintar, incluso al recargar una página interior.
+    const initialPath = (location.hash.slice(1) || '/').split('?')[0];
+    const initialColor = initialPath === '/' ? '#121312' : '#ffffff';
+    document.documentElement.style.setProperty('--overscroll-color', initialColor);
+    document.querySelector('meta[name="theme-color"]').content = initialColor;
+  </script>
+  <meta name="description" content="Un archivo personal de cultura y experiencias.">
+  <title>Postcredit — Lo que queda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=23">
+  <script src="/app.js?v=29" type="module"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="header" id="header">
+    <a class="brand" href="#/">POSTCREDIT<span class="brand-dot">.</span></a>
+    <span class="header-caption">ARCHIVO PERSONAL<br>CULTURA &amp; EXPERIENCIAS</span>
+    <nav aria-label="Navegación principal" class="nav">
+      <a href="#/archivo">MI ARCHIVO</a>
+      <a href="#/nueva">+ NUEVA RESEÑA</a>
+      <a href="#/circulo">MI CÍRCULO</a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="menu">MENÚ <span>+</span></button>
+    </nav>
+    <div class="menu" id="menu" hidden>
+      <a href="#/">Inicio</a>
+      <a href="#/archivo">Mi archivo</a>
+      <a href="#/nueva">Nueva reseña</a>
+      <a href="#/circulo">Mi círculo</a>
+      <a href="#/ingresar" data-guest>Ingresar</a>
+      <button type="button" data-logout hidden>Cerrar sesión <span>↗</span></button>
+      <p>UN LUGAR PARA LO QUE QUEDA.</p>
+    </div>
+  </header>
+  <main id="main" tabindex="-1"></main>
+  <footer class="footer"><span>POSTCREDIT © 2026</span><span>MONTEVIDEO, URUGUAY</span></footer>
+  <div id="announcer" role="status" aria-live="polite" class="sr-only"></div>
+</body>
+</html>
