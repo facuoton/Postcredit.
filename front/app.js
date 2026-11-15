@@ -40,7 +40,7 @@ window.addEventListener('touchstart', event => {
   touchEdgeLocked = false;
 }, { passive:true });
 window.addEventListener('touchmove', event => {
-  if (!innerPage || scrollRange() > 2 || touchStartY === null || touchEdgeLocked || event.touches.length !== 1) return;
+  if (window.matchMedia('(pointer: coarse)').matches || !innerPage || scrollRange() > 2 || touchStartY === null || touchEdgeLocked || event.touches.length !== 1) return;
   const movement = event.touches[0].clientY - touchStartY;
   if (Math.abs(movement) < 4) return;
   setEdgeColor(movement > 0);
