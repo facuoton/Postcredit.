@@ -12,7 +12,9 @@ let wheelUnlockTimer;
 function setEdgeColor(light) {
   const color = light ? '#ffffff' : '#121312';
   if (themeColor.content !== color) themeColor.content = color;
-  document.documentElement.style.setProperty('--overscroll-color', color);
+  if (document.documentElement.style.getPropertyValue('--overscroll-color') !== color) {
+    document.documentElement.style.setProperty('--overscroll-color', color);
+  }
 }
 function updateEdgeColor(direction = 0) {
   if (touchEdgeLocked || wheelEdgeLocked) return;
@@ -225,13 +227,20 @@ function setupHeroScroll() {
   let frame = null;
   let target = 0;
   let disposed = false;
+  let geometryDirty = true, distance = 0, sectionTop = 0;
+  const hero = section.querySelector('.hero');
   const schedule = () => { if (!disposed && frame === null) frame = requestAnimationFrame(update); };
+  const updateGeometry = () => { geometryDirty = true; schedule(); };
   function update() {
     frame = null;
     if (!Number.isFinite(video.duration) || video.duration <= 0) return;
-    const distance = section.offsetHeight - section.querySelector('.hero').offsetHeight;
+    if (geometryDirty) {
+      distance = section.offsetHeight - hero.offsetHeight;
+      sectionTop = section.getBoundingClientRect().top + window.scrollY;
+      geometryDirty = false;
+    }
     if (distance <= 0) return;
-    const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
+    const progress = Math.max(0, Math.min(1, (window.scrollY - sectionTop) / distance));
     target = progress * Math.max(0, video.duration - 1 / 24);
     if (!video.seeking && Math.abs(video.currentTime - target) > 1 / 48) {
       if (videoExperiment && !preciseSeekExperiment && typeof video.fastSeek === 'function') {
@@ -272,7 +281,7 @@ function setupHeroScroll() {
   video.addEventListener('seeked', seeked);
   video.addEventListener('error', failed);
   window.addEventListener('scroll', schedule, { passive:true });
-  window.addEventListener('resize', schedule, { passive:true });
+  window.addEventListener('resize', updateGeometry, { passive:true });
   document.addEventListener('visibilitychange', restoreVideo);
   window.addEventListener('pageshow', restoreVideo);
   if (videoExperiment) {
@@ -301,7 +310,7 @@ function setupHeroScroll() {
     disposed = true;
     if (frame !== null) cancelAnimationFrame(frame);
     window.removeEventListener('scroll', schedule);
-    window.removeEventListener('resize', schedule);
+    window.removeEventListener('resize', updateGeometry);
     document.removeEventListener('visibilitychange', restoreVideo);
     window.removeEventListener('pageshow', restoreVideo);
     window.removeEventListener('touchstart', primeVideo);
