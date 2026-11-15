@@ -210,10 +210,14 @@ function setupHeroScroll() {
   const videoExperiment = touch && new URLSearchParams(location.search).get('hero') === 'video';
   if (touch && !videoExperiment) { setupTouchHero(section, video); return; }
   if (videoExperiment) {
-    video.src = '/assets/cine-scroll-vertical.mp4';
+    video.querySelector('source')?.remove();
+    video.preload = 'none';
     video.muted = true;
     video.setAttribute('playsinline', '');
   }
+  let mediaReady = !videoExperiment;
+  let mediaObjectURL = null;
+  const mediaRequest = videoExperiment ? new AbortController() : null;
   let primed = false, priming = false;
   let lastRequested = null;
   let frame = null;
@@ -245,7 +249,7 @@ function setupHeroScroll() {
   const failed = () => { video.classList.remove('is-ready'); };
   // Safari puede demorar la carga hasta que el video comience a reproducirse.
   function primeVideo() {
-    if (!videoExperiment || disposed || primed || priming || document.hidden) return;
+    if (!videoExperiment || !mediaReady || disposed || primed || priming || document.hidden) return;
     priming = true;
     video.play().then(() => {
       video.pause();
@@ -253,7 +257,7 @@ function setupHeroScroll() {
     }).catch(() => {}).finally(() => { priming = false; });
   }
   function restoreVideo() {
-    if (disposed || document.hidden) return;
+    if (disposed || document.hidden || !mediaReady) return;
     // Safari puede descartar el decodificador mientras la pestaña está oculta.
     // Recuperar los cuadros sin recargar la página y sincronizar al cargar.
     video.classList.remove('is-ready');
@@ -269,7 +273,27 @@ function setupHeroScroll() {
   window.addEventListener('resize', schedule, { passive:true });
   document.addEventListener('visibilitychange', restoreVideo);
   window.addEventListener('pageshow', restoreVideo);
-  if (videoExperiment) { window.addEventListener('touchstart', primeVideo, { passive:true }); video.load(); primeVideo(); }
+  if (videoExperiment) {
+    window.addEventListener('touchstart', primeVideo, { passive:true });
+    // Esperar a descargar el video completo evita pausas por buffering durante el scroll.
+    fetch('/assets/cine-scroll-vertical.mp4', { signal:mediaRequest.signal })
+      .then(response => { if (!response.ok) throw new Error('No se pudo descargar el video'); return response.blob(); })
+      .then(blob => {
+        if (disposed) return;
+        mediaObjectURL = URL.createObjectURL(blob);
+        video.src = mediaObjectURL;
+        mediaReady = true;
+        video.load();
+        primeVideo();
+      }).catch(error => {
+        if (disposed || error.name === 'AbortError') return;
+        // Si la descarga anticipada falla, conservar la reproducción directa.
+        video.src = '/assets/cine-scroll-vertical.mp4';
+        mediaReady = true;
+        video.load();
+        primeVideo();
+      });
+  }
   if (video.readyState >= 2) loaded();
   cleanupHeroScroll = () => {
     disposed = true;
@@ -283,6 +307,8 @@ function setupHeroScroll() {
     video.removeEventListener('seeked', seeked);
     video.removeEventListener('error', failed);
     video.pause();
+    mediaRequest?.abort();
+    if (mediaObjectURL) URL.revokeObjectURL(mediaObjectURL);
   };
 }
 function auth(isRegister) {
