@@ -5,10 +5,6 @@ const menuToggle = document.querySelector('.nav-toggle');
 const announcer = document.querySelector('#announcer');
 const themeColor = document.querySelector('meta[name="theme-color"]');
 let innerPage = false;
-let touchStartY = null;
-let touchEdgeLocked = false;
-let wheelEdgeLocked = false;
-let wheelUnlockTimer;
 function setEdgeColor(light) {
   const color = light ? '#ffffff' : '#121312';
   if (themeColor.content !== color) themeColor.content = color;
@@ -16,38 +12,25 @@ function setEdgeColor(light) {
     document.documentElement.style.setProperty('--overscroll-color', color);
   }
 }
-function scrollRange() {
-  return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-}
-function updateEdgeColor() {
-  if (!innerPage) { setEdgeColor(false); return; }
-  const range = scrollRange();
-  // En páginas con recorrido, cambiar lejos del rebote, no durante él.
-  if (range > 2) setEdgeColor(Math.max(0, Math.min(range, window.scrollY)) < range / 2);
-}
-window.addEventListener('scroll', updateEdgeColor, { passive:true });
-window.addEventListener('resize', updateEdgeColor, { passive:true });
-window.addEventListener('wheel', event => {
-  // Si toda la página entra en pantalla, ambos bordes comparten la posición 0.
-  if (!innerPage || scrollRange() > 2 || !event.deltaY || wheelEdgeLocked) return;
-  setEdgeColor(event.deltaY < 0);
-  wheelEdgeLocked = true;
-  clearTimeout(wheelUnlockTimer);
-  wheelUnlockTimer = setTimeout(() => { wheelEdgeLocked = false; }, 200);
-}, { passive:true });
+// En la parte inferior detener el arrastre, sin interceptar la recarga superior.
+let previousTouch = null;
 window.addEventListener('touchstart', event => {
-  touchStartY = event.touches.length === 1 ? event.touches[0].clientY : null;
-  touchEdgeLocked = false;
+  previousTouch = event.touches.length === 1 ? { x:event.touches[0].clientX, y:event.touches[0].clientY } : null;
 }, { passive:true });
 window.addEventListener('touchmove', event => {
-  if (window.matchMedia('(pointer: coarse)').matches || !innerPage || scrollRange() > 2 || touchStartY === null || touchEdgeLocked || event.touches.length !== 1) return;
-  const movement = event.touches[0].clientY - touchStartY;
-  if (Math.abs(movement) < 4) return;
-  setEdgeColor(movement > 0);
-  touchEdgeLocked = true;
-}, { passive:true });
-window.addEventListener('touchend', () => { touchStartY = null; touchEdgeLocked = false; }, { passive:true });
-window.addEventListener('touchcancel', () => { touchStartY = null; touchEdgeLocked = false; }, { passive:true });
+  if (!previousTouch || event.touches.length !== 1 || !window.matchMedia('(pointer: coarse)').matches) return;
+  const touch = event.touches[0];
+  const dx = touch.clientX - previousTouch.x;
+  const dy = touch.clientY - previousTouch.y;
+  previousTouch = { x:touch.clientX, y:touch.clientY };
+  // Los gestos dentro de visores, galerías o listas conservan su propio scroll.
+  if (event.target instanceof Element && event.target.closest('.photo-viewer, .custom-select-list, .date-calendar, textarea')) return;
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const atBottom = window.scrollY >= maxScroll - 1;
+  if (atBottom && dy < 0 && Math.abs(dy) > Math.abs(dx) && event.cancelable) event.preventDefault();
+}, { passive:false });
+window.addEventListener('touchend', () => { previousTouch = null; }, { passive:true });
+window.addEventListener('touchcancel', () => { previousTouch = null; }, { passive:true });
 const state = { token: sessionStorage.getItem('postcredit-token'), user: null, categories: [] };
 let cleanupHeroScroll = () => {};
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
@@ -711,7 +694,7 @@ async function route() {
     else if (path === '/circulo') await circle();
     else if (path.startsWith('/circulo/')) await friendArchive(path.slice('/circulo/'.length));
     else main.innerHTML = `<div class="page">${empty('Esta página no existe.', 'Volvamos al principio.', '#/', 'VOLVER AL INICIO')}</div>`;
-    observeReveals(); window.scrollTo({ top:0, behavior:'instant' }); updateEdgeColor();
+    observeReveals(); window.scrollTo({ top:0, behavior:'instant' });
   } catch (error) { main.innerHTML = `<div class="page">${empty('No pudimos cargar esta página.', label(error.message), '#/', 'VOLVER AL INICIO')}</div>`; }
 }
 window.addEventListener('hashchange', route);

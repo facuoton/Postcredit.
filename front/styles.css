@@ -140,7 +140,7 @@ main,.page,.records,.record,.record>div,.record-meta,.filter-bar>*{min-width:0}
 /* Evitar la variante emoji de las flechas en Safari. */
 .custom-select-arrow{display:inline-flex;align-items:center;justify-content:center;flex:none;width:16px;height:16px}.custom-select-arrow svg{display:block;width:100%;height:100%}
 
-/* En dispositivos táctiles, detener el rebote en los extremos de la página. */
+/* Extender visualmente el color del pie sin agregar altura desplazable. */
 @media (pointer:coarse){
-  html,body{overscroll-behavior-y:none}
+  .footer{box-shadow:0 100vh 0 100vh var(--ink)}
 }
