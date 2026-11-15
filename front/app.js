@@ -206,7 +206,15 @@ function setupHeroScroll() {
     video.remove();
     return;
   }
-  if (window.matchMedia('(pointer: coarse)').matches) { setupTouchHero(section, video); return; }
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  const videoExperiment = touch && new URLSearchParams(location.search).get('hero') === 'video';
+  if (touch && !videoExperiment) { setupTouchHero(section, video); return; }
+  if (videoExperiment) {
+    video.src = '/assets/cine-scroll-vertical.mp4';
+    video.muted = true;
+    video.setAttribute('playsinline', '');
+  }
+  let primed = false, priming = false;
   let frame = null;
   let target = 0;
   let disposed = false;
@@ -223,12 +231,23 @@ function setupHeroScroll() {
   const loaded = () => { video.removeAttribute('poster'); video.classList.add('is-ready'); schedule(); };
   const seeked = () => { if (Math.abs(video.currentTime - target) > 1 / 48) schedule(); };
   const failed = () => { video.classList.remove('is-ready'); };
+  // Safari puede demorar la carga hasta que el video comience a reproducirse.
+  function primeVideo() {
+    if (!videoExperiment || disposed || primed || priming || document.hidden) return;
+    priming = true;
+    video.play().then(() => {
+      video.pause();
+      if (!disposed) { primed = true; schedule(); }
+    }).catch(() => {}).finally(() => { priming = false; });
+  }
   function restoreVideo() {
     if (disposed || document.hidden) return;
     // Safari puede descartar el decodificador mientras la pestaña está oculta.
     // Recuperar los cuadros sin recargar la página y sincronizar al cargar.
     video.classList.remove('is-ready');
+    primed = false;
     video.load();
+    primeVideo();
   }
   video.addEventListener('loadeddata', loaded);
   video.addEventListener('seeked', seeked);
@@ -237,6 +256,7 @@ function setupHeroScroll() {
   window.addEventListener('resize', schedule, { passive:true });
   document.addEventListener('visibilitychange', restoreVideo);
   window.addEventListener('pageshow', restoreVideo);
+  if (videoExperiment) { window.addEventListener('touchstart', primeVideo, { passive:true }); video.load(); primeVideo(); }
   if (video.readyState >= 2) loaded();
   cleanupHeroScroll = () => {
     disposed = true;
@@ -245,6 +265,7 @@ function setupHeroScroll() {
     window.removeEventListener('resize', schedule);
     document.removeEventListener('visibilitychange', restoreVideo);
     window.removeEventListener('pageshow', restoreVideo);
+    window.removeEventListener('touchstart', primeVideo);
     video.removeEventListener('loadeddata', loaded);
     video.removeEventListener('seeked', seeked);
     video.removeEventListener('error', failed);
