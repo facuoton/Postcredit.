@@ -102,3 +102,9 @@ select:required:invalid{color:#8a8e86}
     padding-bottom:calc(24px + 100lvh - 100svh);
   }
 }
+
+/* Prueba de secuencia sincronizada por el navegador con el scroll. */
+.hero-css-experiment{view-timeline-name:--hero-progress;view-timeline-axis:block}
+.hero-film-crop{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.hero-film-window{position:absolute;left:50%;top:50%;width:max(100%,56.25lvh);height:max(100%,177.7778vw);transform:translate(-50%,-50%);overflow:hidden}
+.hero-film-sheet{position:absolute;left:0;top:0;width:500%;height:500%;max-width:none;opacity:0;animation-duration:1s;animation-timing-function:steps(1,end);animation-fill-mode:both;animation-timeline:--hero-progress;animation-range:contain 0% contain 100%}

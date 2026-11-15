@@ -201,6 +201,45 @@ function setupTouchHero(section, video) {
     sprites.clear();
   };
 }
+// Prueba: Safari sincroniza la secuencia con el scroll sin buscar cuadros de video.
+function setupCSSHero(section, video) {
+  video.remove();
+  section.classList.add('hero-css-experiment');
+  const crop = document.createElement('div');
+  crop.className = 'hero-film-crop';
+  crop.setAttribute('aria-hidden', 'true');
+  const windowEl = document.createElement('div');
+  windowEl.className = 'hero-film-window';
+  crop.append(windowEl);
+  const style = document.createElement('style');
+  const rules = [];
+  const pictures = [];
+  for (let sheet = 0; sheet < 4; sheet++) {
+    const frames = [];
+    for (let step = 0; step <= 100; step++) {
+      const frame = Math.min(99, step);
+      const local = frame % 25;
+      const x = -(local % 5) * 20;
+      const y = -Math.floor(local / 5) * 20;
+      frames.push(`${step}%{transform:translate(${x}%,${y}%);opacity:${Math.floor(frame / 25) === sheet ? 1 : 0}}`);
+    }
+    rules.push(`@keyframes hero-film-${sheet}{${frames.join('')}}`);
+    const img = new Image();
+    img.className = 'hero-film-sheet';
+    img.style.animationName = `hero-film-${sheet}`;
+    img.alt = '';
+    img.src = `/assets/cine-vertical-v2/${sheet}.jpg`;
+    windowEl.append(img);
+    pictures.push(img);
+  }
+  style.textContent = rules.join('\n');
+  document.head.append(style);
+  let disposed = false;
+  Promise.all(pictures.map(img => img.decode())).then(() => {
+    if (!disposed) section.querySelector('.hero').prepend(crop);
+  }).catch(() => {});
+  cleanupHeroScroll = () => { disposed = true; style.remove(); crop.remove(); pictures.forEach(img => img.removeAttribute('src')); };
+}
 function setupHeroScroll() {
   const section = document.querySelector('.hero-scroll');
   const video = section.querySelector('.hero-video');
@@ -210,6 +249,9 @@ function setupHeroScroll() {
   }
   const touch = window.matchMedia('(pointer: coarse)').matches;
   const heroMode = new URLSearchParams(location.search).get('hero');
+  const cssExperiment = touch && heroMode === 'css' && window.matchMedia('(orientation: portrait)').matches
+    && CSS.supports('view-timeline-name', '--hero-progress') && CSS.supports('animation-timeline', '--hero-progress');
+  if (cssExperiment) { setupCSSHero(section, video); return; }
   const videoExperiment = touch && ['video', 'video-suave'].includes(heroMode);
   const preciseSeekExperiment = heroMode === 'video-suave';
   if (touch && !videoExperiment) { setupTouchHero(section, video); return; }
