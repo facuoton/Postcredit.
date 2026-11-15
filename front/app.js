@@ -207,7 +207,9 @@ function setupHeroScroll() {
     return;
   }
   const touch = window.matchMedia('(pointer: coarse)').matches;
-  const videoExperiment = touch && new URLSearchParams(location.search).get('hero') === 'video';
+  const heroMode = new URLSearchParams(location.search).get('hero');
+  const videoExperiment = touch && ['video', 'video-suave'].includes(heroMode);
+  const preciseSeekExperiment = heroMode === 'video-suave';
   if (touch && !videoExperiment) { setupTouchHero(section, video); return; }
   if (videoExperiment) {
     video.querySelector('source')?.remove();
@@ -232,7 +234,7 @@ function setupHeroScroll() {
     const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
     target = progress * Math.max(0, video.duration - 1 / 24);
     if (!video.seeking && Math.abs(video.currentTime - target) > 1 / 48) {
-      if (videoExperiment && typeof video.fastSeek === 'function') {
+      if (videoExperiment && !preciseSeekExperiment && typeof video.fastSeek === 'function') {
         // Todos los cuadros son keyframes; priorizar respuesta al movimiento.
         lastRequested = target;
         try { video.fastSeek(target); } catch { video.currentTime = target; }
