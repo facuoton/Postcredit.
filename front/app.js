@@ -129,32 +129,43 @@ function setupTouchHero(section, video) {
   const hero = section.querySelector('.hero');
   hero.prepend(canvas);
   const context = canvas.getContext('2d', { alpha:false });
-  const sprites = Array.from({ length:4 }, () => new Image());
-  let desired = 0, raf = null, stopped = false;
+  const sprites = new Map();
+  let desired = 0, direction = 1, raf = null, stopped = false;
   const schedule = () => { if (!stopped && raf === null) raf = requestAnimationFrame(update); };
   function update() {
     raf = null;
     const distance = section.offsetHeight - hero.offsetHeight;
     if (distance <= 0) return;
     const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / distance));
-    desired = Math.min(99, Math.round(progress * 99));
-    const sprite = sprites[Math.floor(desired / 25)];
+    const nextFrame = Math.min(99, Math.round(progress * 99));
+    if (nextFrame !== desired) direction = nextFrame > desired ? 1 : -1;
+    desired = nextFrame;
+    const current = Math.floor(desired / 25);
+    const neighbor = Math.max(0, Math.min(3, current + direction));
+    const needed = new Set([current, neighbor]);
+    sprites.forEach((image, index) => {
+      if (!needed.has(index)) { image.onload = null; image.removeAttribute('src'); sprites.delete(index); }
+    });
+    needed.forEach(index => {
+      if (sprites.has(index)) return;
+      const image = new Image();
+      image.onload = schedule;
+      image.src = `/assets/cine-sprites-hd/${index}.jpg`;
+      sprites.set(index, image);
+    });
+    const sprite = sprites.get(current);
     if (!sprite.complete || !sprite.naturalWidth || !context) return;
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
     const width = Math.max(1, Math.round(hero.clientWidth * ratio));
     const height = Math.max(1, Math.round(hero.clientHeight * ratio));
     if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
     const frame = desired % 25;
-    const scale = Math.max(width / 480, height / 270);
-    const drawnWidth = 480 * scale, drawnHeight = 270 * scale;
-    context.drawImage(sprite, (frame % 5) * 480, Math.floor(frame / 5) * 270, 480, 270,
+    const scale = Math.max(width / 720, height / 405);
+    const drawnWidth = 720 * scale, drawnHeight = 405 * scale;
+    context.drawImage(sprite, (frame % 5) * 720, Math.floor(frame / 5) * 405, 720, 405,
       (width - drawnWidth) / 2, (height - drawnHeight) / 2, drawnWidth, drawnHeight);
     canvas.classList.add('is-ready');
   }
-  sprites.forEach((image, index) => {
-    image.onload = schedule;
-    image.src = `/assets/cine-sprites/${index}.jpg`;
-  });
   window.addEventListener('scroll', schedule, { passive:true });
   window.addEventListener('resize', schedule, { passive:true });
   window.visualViewport?.addEventListener('resize', schedule, { passive:true });
@@ -169,7 +180,8 @@ function setupTouchHero(section, video) {
     window.visualViewport?.removeEventListener('resize', schedule);
     window.removeEventListener('pageshow', schedule);
     document.removeEventListener('visibilitychange', schedule);
-    sprites.forEach(image => { image.onload = null; });
+    sprites.forEach(image => { image.onload = null; image.removeAttribute('src'); });
+    sprites.clear();
   };
 }
 function setupHeroScroll() {
