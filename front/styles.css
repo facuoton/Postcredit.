@@ -111,4 +111,11 @@ select:required:invalid{color:#8a8e86}
 
 /* En teléfonos el hero es una foto y el desplazamiento es natural. */
 .hero-scroll.is-mobile-static{height:auto;background:var(--ink)}
-.hero-scroll.is-mobile-static .hero{position:relative;top:auto;height:100vh;height:100lvh;min-height:0;padding-bottom:calc(24px + 100lvh - 100svh)}
+.hero-scroll.is-mobile-static .hero{
+  position:relative;
+  top:auto;
+  height:100vh;
+  height:calc(100lvh + (100lvh - 100svh));
+  min-height:0;
+  padding-bottom:calc(24px + 100lvh - 100svh + 100lvh - 100svh);
+}
