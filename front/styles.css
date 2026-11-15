@@ -119,3 +119,20 @@ select:required:invalid{color:#8a8e86}
   min-height:0;
   padding-bottom:calc(24px + 100lvh - 100svh + 100lvh - 100svh);
 }
+
+/* Evitar que el contenido de las reseñas ensanche el archivo en móvil. */
+main,.page,.records,.record,.record>div,.record-meta,.filter-bar>*{min-width:0}
+.record{grid-template-columns:minmax(0,1fr) auto}
+.record h2,.record p,.record .tag,.person strong,.person .helper{overflow-wrap:anywhere}
+.photo-gallery,.photo-editor{min-width:0;width:100%}
+.photo-thumbnail,.photo-item{min-width:0;width:100%}
+.photo-thumbnail img,.photo-item img{min-width:0;max-width:100%}
+@media(max-width:800px){
+  .page{width:100%}
+  .record{grid-template-columns:minmax(0,1fr)}
+  .record-meta,.record-actions{max-width:100%}
+  .photo-gallery,.photo-editor{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .circle-intro a,.archive-actions a{max-width:100%}
+  .person{flex-wrap:wrap}
+  .person>div{min-width:0}
+}
