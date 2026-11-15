@@ -113,8 +113,10 @@ function observeReveals() {
   targets.forEach((target) => observer.observe(target));
 }
 function landing() {
+  // Los teléfonos muestran la foto fija; el iPad conserva su experiencia actual.
+  const mobileStatic = window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
   const categories = state.categories.map((cat) => `<a class="category-link" href="#/archivo?categoria=${encodeURIComponent(cat.id)}"><span>${label(cat.nombre)}</span></a>`).join('');
-  main.innerHTML = `<section class="hero-scroll"><div class="hero"><video class="hero-video" muted playsinline preload="auto" aria-hidden="true" tabindex="-1" poster="/assets/cine.jpg"><source src="/assets/cine-scroll.mp4" type="video/mp4"></video><div class="hero-grid"><h1 class="reveal">Hay cosas que<br>se quedan.</h1><p class="hero-copy mono reveal">LAS PELÍCULAS, LOS DISCOS, LOS LUGARES.<br>UN ARCHIVO DE LO QUE VIVISTE<br>Y DE LO QUE TE HIZO SENTIR.</p></div><div class="hero-bottom mono"><span>DESPUÉS DE LOS CRÉDITOS</span><a class="text-link" href="#/archivo">EXPLORAR MI ARCHIVO ${arrow}</a></div></div></section>
+  main.innerHTML = `<section class="hero-scroll${mobileStatic ? ' is-mobile-static' : ''}"><div class="hero">${mobileStatic ? '' : `<video class="hero-video" muted playsinline preload="auto" aria-hidden="true" tabindex="-1" poster="/assets/cine.jpg"><source src="/assets/cine-scroll.mp4" type="video/mp4"></video>`}<div class="hero-grid"><h1 class="reveal">Hay cosas que<br>se quedan.</h1><p class="hero-copy mono reveal">LAS PELÍCULAS, LOS DISCOS, LOS LUGARES.<br>UN ARCHIVO DE LO QUE VIVISTE<br>Y DE LO QUE TE HIZO SENTIR.</p></div><div class="hero-bottom mono"><span>DESPUÉS DE LOS CRÉDITOS</span><a class="text-link" href="#/archivo">EXPLORAR MI ARCHIVO ${arrow}</a></div></div></section>
     <section class="section manifesto"><p class="eyebrow reveal">NO TODO TERMINA<br>CUANDO TERMINA.</p><h2 class="reveal">Una película que vuelve. Un disco que te acompaña. Un lugar al que querés regresar. Postcredit guarda lo que te pasó con cada uno, para que el tiempo no decida qué te acordás.</h2></section>
     <section class="section categories"><div class="section-top mono reveal"><span>CATEGORÍAS</span><p>CADA EXPERIENCIA, SU PROPIA ESCALA.<br>SIN COMPARAR UNA PELÍCULA CON UN VIAJE.</p></div><div class="categories-grid"><div class="category-list reveal">${categories}</div><div class="category-aside reveal"><div class="category-image"><img src="/assets/cine.jpg" alt="Sala de cine vacía con butacas rojas" loading="lazy"></div><p class="mono">UNA FORMA DE RECORDAR / A TU MANERA</p><p class="aside-copy">Lo que queda cuando se encienden las luces.</p></div></div></section>
     <section class="closing"><p class="mono">EL FINAL ES EL PRINCIPIO DEL RECUERDO.</p><h2>Postcredit.</h2><div class="closing-row mono"><span>TU CRITERIO. TU ARCHIVO.</span><a class="text-link" href="#/registro">EMPEZAR MI ARCHIVO ${arrow}</a></div></section>`;
@@ -243,6 +245,7 @@ function setupCSSHero(section, video) {
 function setupHeroScroll() {
   const section = document.querySelector('.hero-scroll');
   const video = section.querySelector('.hero-video');
+  if (!video) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     video.remove();
     return;
